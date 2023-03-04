@@ -1,4 +1,4 @@
-use crate::utils::{DataReadExt, DataWriteExt};
+use crate::{utils::{DataReadExt, DataWriteExt}, State};
 
 pub mod c2s;
 pub mod s2c;
@@ -10,7 +10,7 @@ pub enum C2SPacket {
 
 #[derive(Debug, Clone)]
 pub enum S2CPacket {
-    // Handshake(s2c::Handshake),
+    LoginSuccess(s2c::LoginSuccess),
 }
 
 #[derive(Debug, Clone)]
@@ -21,7 +21,7 @@ pub enum Packet {
 
 #[async_trait::async_trait]
 pub trait ReadExactPacket {
-    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send) -> anyhow::Result<Self> where Self: Sized;
+    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send, state: State) -> anyhow::Result<Self> where Self: Sized;
 }
 
 #[async_trait::async_trait]

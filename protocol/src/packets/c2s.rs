@@ -1,5 +1,5 @@
 use tokio::io::AsyncWriteExt;
-use crate::utils::{DataReadExt, DataWriteExt};
+use crate::{utils::{DataReadExt, DataWriteExt}, State};
 
 use super::{ReadExactPacket, WriteExactPacket};
 
@@ -29,7 +29,7 @@ impl From<NextState> for i32 {
 
 #[async_trait::async_trait]
 impl ReadExactPacket for Handshake {
-    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send) -> anyhow::Result<Self> where Self: Sized {
+    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send, _state: State) -> anyhow::Result<Self> where Self: Sized {
         let protocol_version = reader.read_varint().await.unwrap();
         let server_address = reader.read_string().await.unwrap();
         let server_port = reader.read_u16().await.unwrap();

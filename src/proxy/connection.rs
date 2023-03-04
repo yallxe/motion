@@ -1,12 +1,14 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
-use protocol::{PacketReadExt, error::ProtocolError, PacketWriteExt, State, packets::Packet};
+use protocol::{PacketReadExt, error::ProtocolError, PacketWriteExt, State, packets::Packet, DirectionEnum};
 use tokio::{
     net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream}, 
-    io::AsyncWriteExt
+    io::AsyncWriteExt, sync::Mutex
 };
 
 use crate::transformers::transform_packet;
+
+use super::tunnel::TunnelPipe;
 
 pub struct Upstream(pub OwnedReadHalf, pub OwnedWriteHalf, pub SocketAddr);
 
@@ -15,10 +17,6 @@ pub struct ProxyConnection {
     
     pub upstream: (OwnedReadHalf, OwnedWriteHalf),
     pub downstream: (OwnedReadHalf, OwnedWriteHalf),
-}
-
-enum PipeType {
-    C2S, S2C,
 }
 
 impl ProxyConnection {
@@ -37,72 +35,7 @@ impl ProxyConnection {
 
     /// Establish proxy connection (create a tunnel basically).
     pub async fn establish(&mut self) {
-        
-        let upstream = pipe(&mut self.upstream.0, &mut self.downstream.1, PipeType::C2S);
-        let downstream = pipe(&mut self.downstream.0, &mut self.upstream.1, PipeType::S2C);
-
-        let _ = tokio::join!(upstream, downstream);
+        let mut tunnel = TunnelPipe::new(self.remote_addr);
+        tunnel.establish_pipes(&mut self.upstream, &mut self.downstream).await;
     }
-}
-
-async fn update_state(state: &mut State, packet: &Packet) {
-    match packet {
-        Packet::C2S(packet) => {
-            match packet {
-                protocol::packets::C2SPacket::Handshake(packet) => {
-                    *state = match packet.next_state {
-                        protocol::packets::c2s::NextState::Status => State::Status,
-                        protocol::packets::c2s::NextState::Login => State::Login,
-                    };
-                },
-                _ => {},
-            }
-        },
-        Packet::S2C(_) => {},
-    }
-}
-
-async fn pipe(reader: &mut OwnedReadHalf, writer: &mut OwnedWriteHalf, pipe_type: PipeType) -> anyhow::Result<()> {
-    let str_type = match pipe_type {
-        PipeType::C2S => "C2S",
-        PipeType::S2C => "S2C",
-    };
-
-    // TODO: Both pipes should have shared state.
-    // TODO: Remake this to PipeState or smth like that
-    let mut state = State::Handshake;
-
-    loop {
-        let packet = match pipe_type {
-            PipeType::C2S => {
-                reader.read_packet_c2s(state).await
-            },
-            PipeType::S2C => {
-                reader.read_packet_s2c(state).await
-            },
-        };
-
-        if let Err(e) = packet {
-            match e {
-                ProtocolError::UnknownPacketId { packet_id: _, data } => {
-                    // println!("Unknown packet id ({}): {}", str_type, packet_id);
-                    writer.write_all(&data).await?;
-                    continue;
-                },
-                ProtocolError::ReadPacket { source } => {
-                    println!("Error reading packet ({}): {}", str_type, source);
-                    break;
-                },
-            }
-        }
-
-        let mut packet = packet.unwrap();
-        
-        update_state(&mut state, &packet).await;
-        transform_packet(&mut packet).await;
-
-        writer.write_packet(&packet).await?;
-    }
-
-    Ok(())
 }
