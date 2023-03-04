@@ -42,7 +42,7 @@ impl TunnelPipe {
                     C2SPacket::Handshake(packet) => {
                         packet.server_address = [
                             packet.server_address.clone(), 
-                            "1.1.1.1".to_string(),
+                            self.upstream_addr.ip().to_string(),
                             generate_offline_uuid(
                                 &self.tunnel_state.username.as_ref().unwrap()
                             ),
