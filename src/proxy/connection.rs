@@ -1,12 +1,7 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
-use protocol::{PacketReadExt, error::ProtocolError, PacketWriteExt, State, packets::Packet, DirectionEnum};
-use tokio::{
-    net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream}, 
-    io::AsyncWriteExt, sync::Mutex
-};
-
-use crate::transformers::transform_packet;
+use tokio::net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream} 
+;
 
 use super::tunnel::TunnelPipe;
 

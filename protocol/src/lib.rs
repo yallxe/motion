@@ -1,5 +1,3 @@
-use std::default;
-
 use error::ProtocolError;
 use packets::{Packet, ReadExactPacket, WriteExactPacket, c2s::Handshake};
 use utils::{DataReadExt, DataWriteExt};
