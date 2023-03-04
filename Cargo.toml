@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.25.0", features = ["full"] }
 anyhow = "1.0"
+sha1 = "0.10"
 
 protocol = { path = "./protocol" }
 

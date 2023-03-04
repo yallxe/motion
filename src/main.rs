@@ -2,7 +2,6 @@ use anyhow::Result;
 
 pub mod config;
 pub mod proxy;
-pub mod transformers;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -14,7 +13,7 @@ async fn main() -> Result<()> {
                 default: true
             }
         ],
-        bind_address: "127.0.0.1:25565".to_string(),
+        bind_address: "0.0.0.0:25565".to_string(),
     };
     
     let proxy = proxy::server::ProxyServer::new(config);

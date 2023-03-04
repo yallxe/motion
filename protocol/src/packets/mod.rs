@@ -6,6 +6,7 @@ pub mod s2c;
 #[derive(Debug, Clone)]
 pub enum C2SPacket {
     Handshake(c2s::Handshake),
+    LoginStart(c2s::LoginStart),
 }
 
 #[derive(Debug, Clone)]

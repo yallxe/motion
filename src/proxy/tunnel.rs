@@ -3,16 +3,26 @@ use std::{sync::Arc, net::SocketAddr};
 use protocol::{State, DirectionEnum, PacketReadExt, error::ProtocolError, packets::{Packet, C2SPacket, c2s::NextState, S2CPacket}, GameStateEnum, PacketWriteExt};
 use tokio::{sync::Mutex, net::tcp::{OwnedWriteHalf, OwnedReadHalf}, io::AsyncWriteExt};
 
+use super::utils::generate_offline_uuid;
+
 pub struct TunnelPipe {
     upstream_addr: SocketAddr,
-    state: State
+    state: State,
+    tunnel_state: TunnelState,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TunnelState {
+    username: Option<String>,
+    waiting_login_start: bool,
 }
 
 impl TunnelPipe {
     pub fn new(upstream_addr: SocketAddr) -> Self {
         Self {
             upstream_addr,
-            state: State::default()
+            state: State::default(),
+            tunnel_state: TunnelState::default(),
         }
     }
 
@@ -23,6 +33,26 @@ impl TunnelPipe {
         let b = pipe(arc, &mut downstream.0, &mut upstream.1, DirectionEnum::S2C);
 
         let _ = tokio::join!(a, b);
+    }
+
+    pub fn transform_packet(&self, packet: &mut Packet) {
+        match packet {
+            Packet::C2S(packet) => {
+                match packet {
+                    C2SPacket::Handshake(packet) => {
+                        packet.server_address = [
+                            packet.server_address.clone(), 
+                            "1.1.1.1".to_string(),
+                            generate_offline_uuid(
+                                &self.tunnel_state.username.as_ref().unwrap()
+                            ),
+                        ].join("\x00");
+                    },
+                    _ => {}
+                }
+            },
+            _ => {}
+        }
     }
 
     pub fn update_state(&mut self, packet: &Packet) {
@@ -37,6 +67,10 @@ impl TunnelPipe {
                             NextState::Status => GameStateEnum::Status,
                         };
                         self.state.handshake = Some(packet.clone());
+                        self.tunnel_state.waiting_login_start = true;
+                    },
+                    (C2SPacket::LoginStart(packet), GameStateEnum::Login) => {
+                        self.tunnel_state.username = Some(packet.username.clone());
                     },
                     _ => {}
                 }
@@ -57,9 +91,9 @@ async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, w
     let dir_str: &str = direction.into();
     loop {
         let t = tunnel.lock().await;
-        /*if direction == DirectionEnum::S2C && t.state.handshake.is_none() {
+        if t.state.state == GameStateEnum::Handshake && direction == DirectionEnum::S2C {
             continue;
-        }*/
+        }
         let state = t.state.clone();
         drop(t);
 
@@ -67,8 +101,7 @@ async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, w
 
         if let Err(e) = packet {
             match e {
-                ProtocolError::UnknownPacketId { packet_id, data } => {
-                    println!("Unknown packet id {} from {} ({} bytes)", packet_id, dir_str, data.len());
+                ProtocolError::UnknownPacketId { packet_id: _, data } => {
                     writer.write_all(&data).await?;
                     continue;
                 },
@@ -79,9 +112,30 @@ async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, w
             }
         }
 
-        let packet = packet.unwrap();
-        println!("Parsed packet from {}: {:#?}", dir_str, packet);
-        tunnel.lock().await.update_state(&packet);
+        let mut packet = packet.unwrap();
+        if let Packet::C2S(C2SPacket::Handshake(_)) = packet {
+            tunnel.lock().await.update_state(&packet);
+            continue;
+        }
+
+        {
+            let mut t = tunnel.lock().await;
+            t.transform_packet(&mut packet);
+            t.update_state(&packet);
+            drop(t);
+        }
+
+        if let Packet::C2S(C2SPacket::LoginStart(_)) = packet {
+            let t = tunnel.lock().await;
+
+            if let Some(handshake) = t.state.handshake.clone() {
+                let mut handshake: Packet = Packet::C2S(C2SPacket::Handshake(handshake));
+                t.transform_packet(&mut handshake);
+                writer.write_packet(&handshake).await?;
+            } else {
+                break;
+            }
+        }
         writer.write_packet(&packet).await?;
     }
     Ok(())

@@ -12,7 +12,7 @@ pub struct Handshake {
     pub next_state: NextState,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NextState {
     Status,
     Login,
@@ -59,6 +59,37 @@ impl WriteExactPacket for Handshake {
         data.write_string(&self.server_address).await?;
         data.write_u16(self.server_port).await?;
         data.write_varint(self.next_state.clone().into()).await?;
+
+        writer.write_varint(data.len() as i32 + 1).await?;
+        writer.write_u8(0x00).await?;
+        writer.write_all(&data).await?;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LoginStart {
+    pub username: String
+}
+
+#[async_trait::async_trait]
+impl ReadExactPacket for LoginStart {
+    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send, _state: State) -> anyhow::Result<Self> where Self: Sized {
+        let username = reader.read_string().await.unwrap();
+
+        Ok(Self {
+            username
+        })
+    }
+}
+
+#[async_trait::async_trait]
+impl WriteExactPacket for LoginStart {
+    async fn write_packet(&self, mut writer: impl DataWriteExt + std::marker::Send) -> anyhow::Result<()> {
+        let mut data = vec![];
+
+        data.write_string(&self.username).await?;
 
         writer.write_varint(data.len() as i32 + 1).await?;
         writer.write_u8(0x00).await?;

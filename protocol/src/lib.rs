@@ -6,7 +6,7 @@ pub mod utils;
 pub mod packets;
 pub mod error;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum GameStateEnum {
     #[default] Handshake,
     Status,
@@ -52,7 +52,10 @@ pub trait PacketReadExt: DataReadExt + Unpin {
                 let handshake = packets::c2s::Handshake::read_packet(self, state).await?;
                 Packet::C2S(packets::C2SPacket::Handshake(handshake))
             },
-
+            (0x00, GameStateEnum::Login) => {
+                let login_start = packets::c2s::LoginStart::read_packet(self, state).await?;
+                Packet::C2S(packets::C2SPacket::LoginStart(login_start))
+            },
             _ => {
                 let mut data = vec![];
                 data.append(&mut d1);
@@ -109,6 +112,12 @@ pub trait PacketWriteExt: DataWriteExt + Unpin {
                     packets::C2SPacket::Handshake(handshake) => {
                         handshake.write_packet(self).await?;
                     },
+                    packets::C2SPacket::LoginStart(login_start) => {
+                        login_start.write_packet(self).await?;
+                    },
+                    _ => {
+                        panic!("Unimplemented write_packet for: {:?}", c2s_packet);
+                    }
                 }
             },
             Packet::S2C(s2c_packet) => {
@@ -116,6 +125,9 @@ pub trait PacketWriteExt: DataWriteExt + Unpin {
                     packets::S2CPacket::LoginSuccess(login_success) => {
                         login_success.write_packet(self).await?;
                     },
+                    _ => {
+                        panic!("Unimplemented write_packet for: {:?}", s2c_packet);
+                    }
                 }
             },
         }
