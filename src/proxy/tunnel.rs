@@ -1,9 +1,7 @@
 use std::{sync::Arc, net::SocketAddr};
 
-use protocol::{State, DirectionEnum, PacketReadExt, error::ProtocolError, packets::{Packet, C2SPacket, c2s::NextState, S2CPacket}, GameStateEnum, PacketWriteExt};
+use protocol::{State, DirectionEnum, PacketReadExt, error::ProtocolError, packets::{Packet, C2SPacket, c2s::NextState, S2CPacket}, GameStateEnum, PacketWriteExt, uuid::UUID3};
 use tokio::{sync::Mutex, net::tcp::{OwnedWriteHalf, OwnedReadHalf}, io::AsyncWriteExt};
-
-use super::utils::generate_offline_uuid;
 
 pub struct TunnelPipe {
     upstream_addr: SocketAddr,
@@ -35,17 +33,17 @@ impl TunnelPipe {
         let _ = tokio::join!(a, b);
     }
 
-    pub fn transform_packet(&self, packet: &mut Packet) {
+    pub fn transform_packet(&self, packet: &mut Packet) -> anyhow::Result<()> {
         match packet {
             Packet::C2S(packet) => {
                 match packet {
                     C2SPacket::Handshake(packet) => {
+                        let uuid = UUID3::new("OfflinePlayer:".to_string() + &self.tunnel_state.username.as_ref().unwrap());
+
                         packet.server_address = [
                             packet.server_address.clone(), 
                             self.upstream_addr.ip().to_string(),
-                            generate_offline_uuid(
-                                &self.tunnel_state.username.as_ref().unwrap()
-                            ),
+                            uuid.to_string(),
                         ].join("\x00");
                     },
                     _ => {}
@@ -53,6 +51,8 @@ impl TunnelPipe {
             },
             _ => {}
         }
+
+        Ok(())
     }
 
     pub fn update_state(&mut self, packet: &Packet) {
@@ -97,7 +97,7 @@ async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, w
         let state = t.state.clone();
         drop(t);
 
-        let packet = reader.read_packet(state, direction).await;
+        let packet = reader.read_packet(&state, direction).await;
 
         if let Err(e) = packet {
             match e {
@@ -120,7 +120,7 @@ async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, w
 
         {
             let mut t = tunnel.lock().await;
-            t.transform_packet(&mut packet);
+            t.transform_packet(&mut packet).unwrap();
             t.update_state(&packet);
             drop(t);
         }
@@ -130,13 +130,14 @@ async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, w
 
             if let Some(handshake) = t.state.handshake.clone() {
                 let mut handshake: Packet = Packet::C2S(C2SPacket::Handshake(handshake));
-                t.transform_packet(&mut handshake);
-                writer.write_packet(&handshake).await?;
+                t.transform_packet(&mut handshake).unwrap();
+                writer.write_packet(&handshake, &state).await.unwrap();
             } else {
                 break;
             }
         }
-        writer.write_packet(&packet).await?;
+
+        writer.write_packet(&packet, &state).await.unwrap();
     }
     Ok(())
 }

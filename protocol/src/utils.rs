@@ -1,4 +1,8 @@
+use std::convert;
+
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+use crate::uuid::UUID3;
 
 #[async_trait::async_trait]
 pub trait DataReadExt: AsyncReadExt + Unpin {
@@ -62,6 +66,17 @@ pub trait DataReadExt: AsyncReadExt + Unpin {
 
         Ok(String::from_utf8(buf)?)
     }
+
+    async fn read_uuid(&mut self) -> anyhow::Result<UUID3> {
+        let mut buf = [0u8; 16];
+        self.read_exact(&mut buf).await?;
+
+        Ok(UUID3::from(u128::from_be_bytes(buf)))
+    }
+
+    async fn read_bool(&mut self) -> anyhow::Result<bool> {
+        Ok(self.read_u8().await? != 0)
+    }
 }
 
 impl<T: AsyncReadExt + Unpin> DataReadExt for T {}
@@ -69,6 +84,11 @@ impl<T: AsyncReadExt + Unpin> DataReadExt for T {}
 #[async_trait::async_trait]
 pub trait DataWriteExt: AsyncWriteExt + Unpin {
     async fn write_varint(&mut self, mut value: i32) -> anyhow::Result<()> {
+        if value == 0 {
+            self.write_u8(0).await?;
+            return Ok(());
+        }
+        
         let mut temp = 0;
         while value != 0 {
             temp = (value & 0b01111111) as u8;
@@ -84,6 +104,19 @@ pub trait DataWriteExt: AsyncWriteExt + Unpin {
     async fn write_string(&mut self, value: &str) -> anyhow::Result<()> {
         self.write_varint(value.len() as i32).await?;
         self.write_all(value.as_bytes()).await?;
+
+        Ok(())
+    }
+
+    async fn write_uuid(&mut self, value: UUID3) -> anyhow::Result<()> {
+        let converted: [u8; 16] = value.into();
+        self.write_all(&converted).await?;
+
+        Ok(())
+    }
+
+    async fn write_bool(&mut self, value: bool) -> anyhow::Result<()> {
+        self.write_u8(value as u8).await?;
 
         Ok(())
     }

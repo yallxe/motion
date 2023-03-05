@@ -10,3 +10,4 @@ async-trait = "0.1.64"
 tokio = { version = "1.25.0", features = ["full"] }
 anyhow = "1.0"
 snafu = "0.7.4"
+md5 = "0.7"
