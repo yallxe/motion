@@ -1,2 +1,4 @@
 /target
+
+# * is protocol version (e.g. 47, 781, etc.)
 /testserver*
