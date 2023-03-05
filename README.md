@@ -1,5 +1,8 @@
-# motion
-Under development
+# motion ✈️
+Minecraft high-efficient extensible reverse proxy written in Rust. Under developement and **NOT** production ready yet.
+
+# Configuration
+Not implemented yet.
 
 # TODO
 - [x] Basic reverse proxy
@@ -13,5 +16,5 @@ Under development
 - [ ] Prometheus metrics
 - [ ] MOTD support
 - [ ] Favicon support
-- [ ] IP Forwarding
+- [x] IP Forwarding
 - [ ] Some internal commands
