@@ -18,7 +18,10 @@ pub struct Property {
 
 #[async_trait::async_trait]
 impl ReadExactPacket for LoginSuccess {
-    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send, state: &State) -> anyhow::Result<Self> where Self: Sized {
+    async fn read_packet(
+        mut reader: impl DataReadExt + std::marker::Send, 
+        state: &State
+    ) -> anyhow::Result<Self> where Self: Sized {
         if state.handshake.is_none() {
             return Err(anyhow::anyhow!("Handshake packet not received"));
         }
@@ -63,7 +66,11 @@ impl ReadExactPacket for LoginSuccess {
 
 #[async_trait::async_trait]
 impl WriteExactPacket for LoginSuccess {
-    async fn write_packet(&self, mut writer: impl DataWriteExt + std::marker::Send, state: &State) -> anyhow::Result<()> {
+    async fn write_packet(
+        &self, 
+        mut writer: impl DataWriteExt + std::marker::Send, 
+        state: &State
+    ) -> anyhow::Result<()> {
         if state.handshake.is_none() {
             return Err(anyhow::anyhow!("Handshake packet not received"));
         }

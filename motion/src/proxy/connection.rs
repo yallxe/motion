@@ -1,7 +1,6 @@
 use std::net::SocketAddr;
 
-use tokio::net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream} 
-;
+use tokio::net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream};
 
 use super::tunnel::TunnelPipe;
 

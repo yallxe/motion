@@ -22,10 +22,17 @@ pub enum Packet {
 
 #[async_trait::async_trait]
 pub trait ReadExactPacket {
-    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send, state: &State) -> anyhow::Result<Self> where Self: Sized;
+    async fn read_packet(
+        mut reader: impl DataReadExt + std::marker::Send, 
+        state: &State
+    ) -> anyhow::Result<Self> where Self: Sized;
 }
 
 #[async_trait::async_trait]
 pub trait WriteExactPacket {
-    async fn write_packet(&self, mut writer: impl DataWriteExt + std::marker::Send, state: &State) -> anyhow::Result<()>;
+    async fn write_packet(
+        &self, 
+        mut writer: impl DataWriteExt + std::marker::Send, 
+        state: &State
+    ) -> anyhow::Result<()>;
 }

@@ -1,5 +1,5 @@
 use error::ProtocolError;
-use packets::{Packet, ReadExactPacket, WriteExactPacket, c2s::Handshake};
+use packets::{Packet, ReadExactPacket, WriteExactPacket, C2SPacket, S2CPacket, c2s, s2c};
 use utils::{DataReadExt, DataWriteExt};
 
 pub mod utils;
@@ -17,7 +17,7 @@ pub enum GameStateEnum {
 
 #[derive(Debug, Clone, Default)]
 pub struct State {
-    pub handshake: Option<Handshake>,
+    pub handshake: Option<c2s::Handshake>,
     pub state: GameStateEnum,
 }
 
@@ -50,12 +50,12 @@ pub trait PacketReadExt: DataReadExt + Unpin {
 
         let packet = match (packet_id, state.state) {
             (0x00, GameStateEnum::Handshake) => {
-                let handshake = packets::c2s::Handshake::read_packet(self, state).await?;
-                Packet::C2S(packets::C2SPacket::Handshake(handshake))
+                let handshake = c2s::Handshake::read_packet(self, state).await?;
+                Packet::C2S(C2SPacket::Handshake(handshake))
             },
             (0x00, GameStateEnum::Login) => {
-                let login_start = packets::c2s::LoginStart::read_packet(self, state).await?;
-                Packet::C2S(packets::C2SPacket::LoginStart(login_start))
+                let login_start = c2s::LoginStart::read_packet(self, state).await?;
+                Packet::C2S(C2SPacket::LoginStart(login_start))
             },
             _ => {
                 let mut data = vec![];
@@ -80,8 +80,8 @@ pub trait PacketReadExt: DataReadExt + Unpin {
         let (packet_id, mut d2) = self.read_varint_preserve_data().await?;
         let packet = match (packet_id, state.state) {
             (0x02, GameStateEnum::Login) => {
-                let login_success = packets::s2c::LoginSuccess::read_packet(self, state).await?;
-                Packet::S2C(packets::S2CPacket::LoginSuccess(login_success))
+                let login_success = s2c::LoginSuccess::read_packet(self, state).await?;
+                Packet::S2C(S2CPacket::LoginSuccess(login_success))
             },
             _ => {
                 let mut data = vec![];
@@ -110,24 +110,18 @@ pub trait PacketWriteExt: DataWriteExt + Unpin {
         match packet {
             Packet::C2S(c2s_packet) => {
                 match c2s_packet {
-                    packets::C2SPacket::Handshake(handshake) => {
+                    C2SPacket::Handshake(handshake) => {
                         handshake.write_packet(self, state).await?;
                     },
-                    packets::C2SPacket::LoginStart(login_start) => {
+                    C2SPacket::LoginStart(login_start) => {
                         login_start.write_packet(self, state).await?;
-                    },
-                    _ => {
-                        panic!("Unimplemented write_packet for: {:?}", c2s_packet);
                     }
                 }
             },
             Packet::S2C(s2c_packet) => {
                 match s2c_packet {
-                    packets::S2CPacket::LoginSuccess(login_success) => {
+                    S2CPacket::LoginSuccess(login_success) => {
                         login_success.write_packet(self, state).await?;
-                    },
-                    _ => {
-                        panic!("Unimplemented write_packet for: {:?}", s2c_packet);
                     }
                 }
             },

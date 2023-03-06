@@ -24,7 +24,11 @@ impl TunnelPipe {
         }
     }
 
-    pub async fn establish_pipes(&mut self, upstream: &mut (OwnedReadHalf, OwnedWriteHalf), downstream: &mut (OwnedReadHalf, OwnedWriteHalf)) {
+    pub async fn establish_pipes(
+        &mut self, 
+        upstream: &mut (OwnedReadHalf, OwnedWriteHalf), 
+        downstream: &mut (OwnedReadHalf, OwnedWriteHalf)
+    ) {
         let arc = Arc::new(Mutex::new(self));
 
         let a = pipe(arc.clone(), &mut upstream.0, &mut downstream.1, DirectionEnum::C2S);
@@ -38,7 +42,10 @@ impl TunnelPipe {
             Packet::C2S(packet) => {
                 match packet {
                     C2SPacket::Handshake(packet) => {
-                        let uuid = UUID3::new("OfflinePlayer:".to_string() + &self.tunnel_state.username.as_ref().unwrap());
+                        let uuid = UUID3::new(
+                            "OfflinePlayer:".to_string() + 
+                            &self.tunnel_state.username.as_ref().unwrap()
+                        );
 
                         packet.server_address = [
                             packet.server_address.clone(), 
@@ -87,7 +94,12 @@ impl TunnelPipe {
     }
 }
 
-async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, writer: &mut OwnedWriteHalf, direction: DirectionEnum) -> anyhow::Result<()> {
+async fn pipe(
+    tunnel: Arc<Mutex<&mut TunnelPipe>>, 
+    reader: &mut OwnedReadHalf, 
+    writer: &mut OwnedWriteHalf, 
+    direction: DirectionEnum
+) -> anyhow::Result<()> {
     let dir_str: &str = direction.into();
     loop {
         let t = tunnel.lock().await;
@@ -122,7 +134,6 @@ async fn pipe(tunnel: Arc<Mutex<&mut TunnelPipe>>, reader: &mut OwnedReadHalf, w
             let mut t = tunnel.lock().await;
             t.transform_packet(&mut packet).unwrap();
             t.update_state(&packet);
-            drop(t);
         }
 
         if let Packet::C2S(C2SPacket::LoginStart(_)) = packet {

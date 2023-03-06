@@ -87,9 +87,8 @@ pub trait DataWriteExt: AsyncWriteExt + Unpin {
             return Ok(());
         }
         
-        let mut temp = 0;
         while value != 0 {
-            temp = (value & 0b01111111) as u8;
+            let mut temp = (value & 0b01111111) as u8;
             value = (value >> 7) & (i32::max_value() as i32);
             if value != 0 {
                 temp |= 0b10000000;

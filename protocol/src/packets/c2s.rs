@@ -29,7 +29,10 @@ impl From<NextState> for i32 {
 
 #[async_trait::async_trait]
 impl ReadExactPacket for Handshake {
-    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send, _state: &State) -> anyhow::Result<Self> where Self: Sized {
+    async fn read_packet(
+        mut reader: impl DataReadExt + std::marker::Send, 
+        _state: &State
+    ) -> anyhow::Result<Self> where Self: Sized {
         let protocol_version = reader.read_varint().await.unwrap();
         let server_address = reader.read_string().await.unwrap();
         let server_port = reader.read_u16().await.unwrap();
@@ -52,7 +55,11 @@ impl ReadExactPacket for Handshake {
 
 #[async_trait::async_trait]
 impl WriteExactPacket for Handshake {
-    async fn write_packet(&self, mut writer: impl DataWriteExt + std::marker::Send, state: &State) -> anyhow::Result<()> {
+    async fn write_packet(
+        &self, 
+        mut writer: impl DataWriteExt + std::marker::Send, 
+        _state: &State
+    ) -> anyhow::Result<()> {
         let mut data = vec![];
 
         data.write_varint(self.protocol_version).await?;
@@ -76,7 +83,10 @@ pub struct LoginStart {
 
 #[async_trait::async_trait]
 impl ReadExactPacket for LoginStart {
-    async fn read_packet(mut reader: impl DataReadExt + std::marker::Send, state: &State) -> anyhow::Result<Self> where Self: Sized {
+    async fn read_packet(
+        mut reader: impl DataReadExt + std::marker::Send, 
+        state: &State
+    ) -> anyhow::Result<Self> where Self: Sized {
         if state.handshake.is_none() {
             return Err(anyhow::anyhow!("Handshake packet not received"));
         }
@@ -104,7 +114,11 @@ impl ReadExactPacket for LoginStart {
 
 #[async_trait::async_trait]
 impl WriteExactPacket for LoginStart {
-    async fn write_packet(&self, mut writer: impl DataWriteExt + std::marker::Send, state: &State) -> anyhow::Result<()> {
+    async fn write_packet(
+        &self, 
+        mut writer: impl DataWriteExt + std::marker::Send, 
+        state: &State
+    ) -> anyhow::Result<()> {
         if state.handshake.is_none() {
             return Err(anyhow::anyhow!("Handshake packet not received"));
         }

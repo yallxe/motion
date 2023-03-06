@@ -1,9 +1,5 @@
-use std::net::SocketAddr;
-
 use tokio::net::TcpListener;
-
 use crate::config::Configuration;
-
 use super::connection::{ProxyConnection, Upstream};
 
 pub struct ProxyServer {
@@ -27,7 +23,7 @@ impl ProxyServer {
             let upstream = Upstream(r, w, addr);
 
             // TODO: choose default downstream server
-            let destination: SocketAddr = self.config.downstreams[0].address.clone().parse().unwrap();
+            let destination = self.config.downstreams[0].address.clone().parse().unwrap();
             tokio::spawn(async move {
                 let mut connection = ProxyConnection::init(upstream, destination).await;
                 connection.establish().await;

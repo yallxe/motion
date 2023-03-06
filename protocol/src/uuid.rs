@@ -52,7 +52,14 @@ impl ToString for UUID3 {
         let dig = Digest(data);
         let string = format!("{:x}", dig);
 
-        format!("{}-{}-{}-{}-{}", &string[0..8], &string[8..12], &string[12..16], &string[16..20], &string[20..32])
+        format!(
+            "{}-{}-{}-{}-{}", 
+            &string[0..8], 
+            &string[8..12], 
+            &string[12..16], 
+            &string[16..20], 
+            &string[20..32]
+        )
     }
 }
 
