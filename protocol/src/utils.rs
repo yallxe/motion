@@ -1,5 +1,3 @@
-use std::convert;
-
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::uuid::UUID3;

@@ -1,0 +1,9 @@
+downstreams:
+  - address: 127.0.0.1:25500
+    name: some_downstream_name
+    default: true
+  - address:
+    name: some_other_downstream_name
+    default: false
+
+bind_address: 0.0.0.0:25565
