@@ -1,26 +1,5 @@
-[package]
-name = "motion"
-author = "yallxe"
-description = "High-performance extensible minecraft reverse proxy"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-tokio = { version = "1.25.0", features = ["full"] }
-anyhow = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
-
-protocol = { path = "./protocol" }
-clap = { version = "4.1.8", features = ["cargo"] }
-
-log = "0.4.17"
-pretty_env_logger = "0.4.0"
-
-[profile.release]
-lto = "fat"
-codegen-units = 1
-# strip = "symbols"
-# strip = "debuginfo"
+[workspace]
+members = [
+    "motion",
+    "protocol"
+]
