@@ -1,12 +1,15 @@
 # motion ✈️
+
 Minecraft high-efficient extensible reverse proxy written in Rust. Under developement and **NOT** production ready yet.
 
-# Configuration
+## Configuration
+
 Not implemented yet.
 
-# TODO
+## TODO
+
 - [x] Basic reverse proxy
-- [ ] CLI & Configuration file
+- [x] CLI & Configuration file
 - [ ] Compression support
 - [ ] Encryption support (online-mode)
 - [ ] Server switching
