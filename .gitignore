@@ -2,3 +2,6 @@
 
 # * is protocol version (e.g. 47, 781, etc.)
 /testserver*
+
+# motion config for dev purposes
+dev-motion.yml
